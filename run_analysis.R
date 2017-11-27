@@ -1,53 +1,54 @@
-fileurl = 'https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip'
+#Downloading the file and unzip it 
+link = 'https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip'
 if (!file.exists('./UCI HAR Dataset.zip')){
-  download.file(fileurl,'./UCI HAR Dataset.zip', mode = 'wb')
+  download.file(link,'./UCI HAR Dataset.zip', mode = 'wb')
   unzip("UCI HAR Dataset.zip", exdir = getwd())
 }
 
-## Read and convert the data
+## Read features, Train and Test and prepare the data for the merging
 features <- read.csv('./UCI HAR Dataset/features.txt', header = FALSE, sep = ' ')
 features <- as.character(features[,2])
 
-data.train.x <- read.table('./UCI HAR Dataset/train/X_train.txt')
-data.train.activity <- read.csv('./UCI HAR Dataset/train/y_train.txt', header = FALSE, sep = ' ')
-data.train.subject <- read.csv('./UCI HAR Dataset/train/subject_train.txt',header = FALSE, sep = ' ')
+TrainX <- read.table('./UCI HAR Dataset/train/X_train.txt')
+TrainY <- read.csv('./UCI HAR Dataset/train/y_train.txt', header = FALSE, sep = ' ')
+TrainSubject <- read.csv('./UCI HAR Dataset/train/subject_train.txt',header = FALSE, sep = ' ')
 
-data.train <-  data.frame(data.train.subject, data.train.activity, data.train.x)
-names(data.train) <- c(c('subject', 'activity'), features)
+Train <-  data.frame(TrainSubject, TrainY, TrainX)
+names(Train) <- c(c('subject', 'activity'), features)
 
-data.test.x <- read.table('./UCI HAR Dataset/test/X_test.txt')
-data.test.activity <- read.csv('./UCI HAR Dataset/test/y_test.txt', header = FALSE, sep = ' ')
-data.test.subject <- read.csv('./UCI HAR Dataset/test/subject_test.txt', header = FALSE, sep = ' ')
+TestX <- read.table('./UCI HAR Dataset/test/X_test.txt')
+TestActivity <- read.csv('./UCI HAR Dataset/test/y_test.txt', header = FALSE, sep = ' ')
+TestSubject <- read.csv('./UCI HAR Dataset/test/subject_test.txt', header = FALSE, sep = ' ')
 
-data.test <-  data.frame(data.test.subject, data.test.activity, data.test.x)
-names(data.test) <- c(c('subject', 'activity'), features)
+Test <-  data.frame(TestSubject, TestActivity, TestX)
+names(Test) <- c(c('subject', 'activity'), features)
 
-#Merge Training and tESTING SET
-data.all <- rbind(data.train, data.test)
+#Apply rbind to merge the data all together
+ConsDT <- rbind(Train, Test)
 
-#Extracting the measurements on the mean
-mean_std.select <- grep('mean|std', features)
-data.sub <- data.all[,c(1,2,mean_std.select + 2)]
+#Measuremements based on mean
+Mean_Std_Sel <- grep('mean|std', features)
+SubDT <- ConsDT[,c(1,2,Mean_Std_Sel + 2)]
 
-#Descriptive acactivity
-activity.labels <- read.table('./UCI HAR Dataset/activity_labels.txt', header = FALSE)
-activity.labels <- as.character(activity.labels[,2])
-data.sub$activity <- activity.labels[data.sub$activity]
+#Descriptive activity
+ACT_Label <- read.table('./UCI HAR Dataset/activity_labels.txt', header = FALSE)
+ACT_Label <- as.character(ACT_Label[,2])
+SubDT$activity <- ACT_Label[SubDT$activity]
 
-#Labeling the data
-name.new <- names(data.sub)
-name.new <- gsub("[(][)]", "", name.new)
-name.new <- gsub("^t", "TimeDomain_", name.new)
-name.new <- gsub("^f", "FrequencyDomain_", name.new)
-name.new <- gsub("Acc", "Accelerometer", name.new)
-name.new <- gsub("Gyro", "Gyroscope", name.new)
-name.new <- gsub("Mag", "Magnitude", name.new)
-name.new <- gsub("-mean-", "_Mean_", name.new)
-name.new <- gsub("-std-", "_StandardDeviation_", name.new)
-name.new <- gsub("-", "_", name.new)
-names(data.sub) <- name.new
+#Adding labels 
+NewLabel <- names(SubDT)
+NewLabel <- gsub("[(][)]", "", NewLabel)
+NewLabel <- gsub("^t", "Time_Domain_", NewLabel)
+NewLabel <- gsub("^f", "Frequency_Domain_", NewLabel)
+NewLabel <- gsub("Acc", "Accelerometer", NewLabel)
+NewLabel <- gsub("Gyro", "Gyroscope", NewLabel)
+NewLabel <- gsub("Mag", "Magnitude", NewLabel)
+NewLabel <- gsub("-mean-", "_Mean_", NewLabel)
+NewLabel <- gsub("-std-", "_Standard_Deviation_", NewLabel)
+NewLabel <- gsub("-", "_", NewLabel)
+names(SubDT) <- NewLabel
 
-#Creating a second tidy data
+#Create tidy data
 
-data.tidy <- aggregate(data.sub[,3:81], by = list(activity = data.sub$activity, subject = data.sub$subject),FUN = mean)
-write.table(x = data.tidy, file = "tidy.txt", row.names = FALSE)
+Final_Data <- aggregate(SubDT[,3:81], by = list(activity = SubDT$activity, subject = SubDT$subject),FUN = mean)
+write.table(x = Final_Data, file = "tidy.txt", row.names = FALSE)
